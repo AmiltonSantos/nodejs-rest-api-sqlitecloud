@@ -127,3 +127,8 @@ const checkDatabaseConnection = async (req, res, next) => {
     next();
   }
 };
+
+// Rota da pagina home onde vai abri a pagina inicial do app
+app.get('/home', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
