@@ -79,3 +79,51 @@ class DatabaseManager {
     }
   }
 }
+
+// Middleware para tratamento de erros
+const errorHandler = (err, req, res, next) => {
+  console.error('Erro:', err);
+
+  const errorResponse = {
+    status: 'error',
+    message: 'Erro interno do servidor'
+  };
+
+  if (config.nodeEnv === 'development') {
+    errorResponse.detail = err.message;
+    errorResponse.stack = err.stack;
+  }
+
+  if (err.message === 'DATABASE_TIMEOUT') {
+    return res.status(HTTP_STATUS.TIMEOUT).json({
+      status: 'error',
+      message: 'A consulta excedeu o tempo limite de 3 minutos'
+    });
+  }
+
+  res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(errorResponse);
+};
+
+// Inicialização do banco de dados
+const dbManager = new DatabaseManager(config.dbPath);
+
+// Middleware
+app.use(express.json());
+app.use(morgan('dev')); // Logging
+app.use(helmet()); // Segurança
+app.use(compression()); // Compressão
+app.use(cors(corsOptions));
+
+// Middleware para verificar conexão com banco
+const checkDatabaseConnection = async (req, res, next) => {
+  if (!dbManager.db) {
+    try {
+      await dbManager.connect();
+      next();
+    } catch (error) {
+      next(new Error('Falha na conexão com o banco de dados'));
+    }
+  } else {
+    next();
+  }
+};
