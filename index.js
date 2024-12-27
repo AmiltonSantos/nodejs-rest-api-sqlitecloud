@@ -132,3 +132,71 @@ const checkDatabaseConnection = async (req, res, next) => {
 app.get('/home', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+/** Traz resultados de uma tabela especificada com limit de 10 linhas, passando o nome da tabela por parâmetro
+  * Exemplo 1: http://localhost:8000/api/read/users  
+  * O "users" e o nome da tabela passada por paramentro
+*/
+app.get('/api/read/:table', checkDatabaseConnection, async (req, res, next) => {
+  const { table } = req?.params; // Obtém o nome da tabela da URL
+
+  const sql = `SELECT * FROM ${table} LIMIT 10`;
+
+  try {
+    const resultado = await dbManager.query(sql);
+    res.status(HTTP_STATUS.OK).json({
+      status: 'success',
+      data: resultado
+    });
+  } catch (error) {
+    if (error?.message?.includes('no such table')) {
+      next(new Error(error.message.replace('no such table:', 'Não existe a tabela:')));
+    } else {
+      next(new Error(error.message));
+    }
+  }
+});
+
+// Rota padrão para endpoints não encontrados
+app.use('*', (req, res) => {
+  res.status(HTTP_STATUS.NOT_FOUND).json({
+    status: 'error',
+    message: 'Endpoint não encontrado'
+  });
+});
+
+// Error handling middleware
+app.use(errorHandler);
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('Recebido SIGTERM. Encerrando...');
+  dbManager.close();
+  process.exit(0);
+});
+
+// Tratamento do Sinal de Interrupção (SIGINT) para Encerramento Limpo
+process.on('SIGINT', () => {
+  console.log('Recebido SIGINT. Encerrando...');
+  dbManager.close();
+  process.exit(0);
+});
+
+// Iniciando servidor
+app.listen(config.port, () => {
+  console.log(`Servidor rodando na porta ${config.port}`);
+});
+
+// Tratamento de erros não capturados
+process.on('uncaughtException', (error) => {
+  console.error('Erro não capturado:', error);
+  dbManager.close();
+  process.exit(1);
+});
+
+// Tratamento de Rejeições Não Tratadas em Promessas
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Rejeição não tratada:', reason);
+  dbManager.close();
+  process.exit(1);
+});
