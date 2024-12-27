@@ -8,9 +8,6 @@ const path = require('path');
 const cors = require('cors');
 const { Database } = require('@sqlitecloud/drivers');
 
-// Configuração da conexão com o banco de dados SQLiteCloud
-const dbCloud = new Database(config.dbPath);
-
 // Configurações
 const config = {
   port: process.env.PORT || 4000,
@@ -33,27 +30,23 @@ const corsOptions = {
   optionsSuccessStatus: 200 // Para navegadores antigos
 };
 
-// Classe para gerenciar conexão com banco de dados
 class DatabaseManager {
   constructor (dbPath) {
     this.db = null;
     this.dbPath = dbPath;
   }
 
-  connect() {
-    return new Promise((resolve, reject) => {
-      dbCloud.connect((err) => {
-        if (err) {
-          if (err) {
-            reject(err);
-            return;
-          }
-        } else {
-          console.log('Conectado ao banco de dados SQLiteCloud');
-          resolve();
-        }
-      });
-    });
+  async connect() {
+    try {
+      // Conectar antes de executar a consulta
+      this.db = new Database(config.dbPath);
+
+      // Esse é o nome do banco de dados do projeto que foi criado no "https://sqlitecloud.io/"
+      await this.db.sql`USE DATABASE database.db;`; 
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
   }
 
   async query(sql, params = [], timeout = config.timeout) {
@@ -71,12 +64,6 @@ class DatabaseManager {
         resolve(rows);
       });
     });
-  }
-
-  close() {
-    if (this.db) {
-      this.db.close();
-    }
   }
 }
 
@@ -116,9 +103,9 @@ app.use(cors(corsOptions));
 
 // Middleware para verificar conexão com banco
 const checkDatabaseConnection = async (req, res, next) => {
-  if (!dbManager.db) {
+  if (!this.db) {
     try {
-      await dbManager.connect();
+      await await dbManager.connect();
       next();
     } catch (error) {
       next(new Error('Falha na conexão com o banco de dados'));
@@ -140,7 +127,7 @@ app.get('/home', (req, res) => {
 app.get('/api/read/:table', checkDatabaseConnection, async (req, res, next) => {
   const { table } = req?.params; // Obtém o nome da tabela da URL
 
-  const sql = `SELECT * FROM ${table} LIMIT 10`;
+  const sql = `SELECT * FROM ${table} LIMIT 10;`;
 
   try {
     const resultado = await dbManager.query(sql);
