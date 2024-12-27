@@ -1,0 +1,9 @@
+*.bak
+*.tmp
+*.vscode
+*tmplate*
+*[#~]
+node_modules/
+tmp/
+.vercel
+*.db
