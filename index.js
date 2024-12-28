@@ -49,13 +49,30 @@ class DatabaseManager {
     }
   }
 
-  async query(sql, params = [], timeout = config.timeout) {
+  async queryAll(sql, params = [], timeout = config.timeout) {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error('DATABASE_TIMEOUT'));
       }, timeout);
 
       this.db.all(sql, params, (err, rows) => {
+        clearTimeout(timeoutId);
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(rows);
+      });
+    });
+  }
+
+  async queryExec(sql = [], timeout = config.timeout) {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error('DATABASE_TIMEOUT'));
+      }, timeout);
+
+      this.db.exec(sql, (err, rows) => {
         clearTimeout(timeoutId);
         if (err) {
           reject(err);
@@ -128,16 +145,16 @@ app.get('/home', (req, res) => {
 });
 
 /** Traz resultados de uma tabela especificada com limit de 10 linhas, passando o nome da tabela por parâmetro
-  * Exemplo 1: http://localhost:10000/api/read/users  
+  * Exemplo 1: http://localhost:10000/api/get/users  
   * O "users" e o nome da tabela passada por paramentro
 */
-app.get('/api/read/:table', checkDatabaseConnection, async (req, res, next) => {
+app.get('/api/get/:table', checkDatabaseConnection, async (req, res, next) => {
   const { table } = req?.params; // Obtém o nome da tabela da URL
 
-  const sql = `SELECT * FROM ${table} LIMIT 10;`;
+  const sql = `SELECT * FROM ${table} LIMIT 10`;
 
   try {
-    const resultado = await dbManager.query(sql);
+    const resultado = await dbManager.queryAll(sql);
     res.status(HTTP_STATUS.OK).json({
       status: 'success',
       data: resultado
@@ -152,10 +169,10 @@ app.get('/api/read/:table', checkDatabaseConnection, async (req, res, next) => {
 });
 
 /** Pesquisando em uma tabela especifica passada por parâmetro e um ID
-    * Exemplo 1: http://localhost:10000/api/read/users/25  
+    * Exemplo 1: http://localhost:10000/api/get/users/25  
     * O "users" e o "25" é a tabela e o numero da linha passada por paramentro
 */
-app.get('/api/read/:table/:id', checkDatabaseConnection, async (req, res, next) => {
+app.get('/api/get/:table/:id', checkDatabaseConnection, async (req, res, next) => {
   const { table, id } = req?.params;
 
   if (!table && !id) {
@@ -165,7 +182,7 @@ app.get('/api/read/:table/:id', checkDatabaseConnection, async (req, res, next) 
   const sql = `SELECT * FROM ${table} WHERE id = ${id}`;
 
   try {
-    const row = await dbManager.query(sql);
+    const row = await dbManager.queryAll(sql);
     if (row.length === 0) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ "message": "User not found" });
     }
@@ -180,10 +197,10 @@ app.get('/api/read/:table/:id', checkDatabaseConnection, async (req, res, next) 
 });
 
 /** Pesquisando passando uma tabela especifica, e com parâmetros de "page" e "limit"
-    * Exemplo 1: http://localhost:8000/api/pagination/users?page=1&limit=10 
+    * Exemplo 1: http://localhost:10000/api/get/pagination/users?page=1&limit=10 
     * O "users", o "page=1" e o "limit=10" e os paramentro padrao para fazer a paginação
 */
-app.get('/api/pagination/:table', checkDatabaseConnection, async (req, res, next) => {
+app.get('/api/get/pagination/:table', checkDatabaseConnection, async (req, res, next) => {
   const { table } = req?.params;
   const { page, limit } = req?.query;
 
@@ -199,7 +216,7 @@ app.get('/api/pagination/:table', checkDatabaseConnection, async (req, res, next
   const sql = `SELECT * FROM ${table} LIMIT ${limitNumber} OFFSET ${offset}`;
 
   try {
-    const rows = await dbManager.query(sql);
+    const rows = await dbManager.queryAll(sql);
     if (rows.length > 0) {
       res.setHeader('Content-Type', 'application/json');
       res.status(HTTP_STATUS.OK).json(rows);
@@ -208,6 +225,45 @@ app.get('/api/pagination/:table', checkDatabaseConnection, async (req, res, next
         "message": `A tabela '${table}' está vazia.`
       });
     }
+  } catch (error) {
+    if (error?.message?.includes('no such table')) {
+      next(new Error(error.message.replace('no such table:', 'Não existe a tabela:')));
+    } else {
+      next(new Error(error.message));
+    }
+  }
+});
+
+/** Atualiza um cadastro existente passando o ID. 
+    * Exemplo 1: http://localhost:10000/api/update/users/1  
+    * O "users" e o "1" é a tabela e o numero da linha passada por paramentro
+    * Modelo de Exemplo no body:
+    {
+        "first": "Amilton",
+        "last": "Santos Gomes",
+        "dept": 2
+    }
+*/
+app.patch('/api/update/:table/:id', checkDatabaseConnection, async (req, res, next) => {
+  const { table, id } = req?.params; // Obtém o nome da tabela da URL
+
+  let keys = [];
+
+  if (Object.keys(req?.body).length > 0) {
+    for (const [key, value] of Object.entries(req?.body)) {
+      if (value === null) {
+        keys.push(key.concat(`=${value}`));
+      } else {
+        keys.push(key.concat(`='${value}'`));
+      }
+    }
+  }
+
+  const sql = `UPDATE ${table} SET ${keys.join()} WHERE id = ${id}`;
+
+  try {
+    await dbManager.queryExec(sql);
+    res.status(HTTP_STATUS.OK).json({ message: `Cadastro atualizado com sucesso!`, changes: this.changes });
   } catch (error) {
     if (error?.message?.includes('no such table')) {
       next(new Error(error.message.replace('no such table:', 'Não existe a tabela:')));
