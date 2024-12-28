@@ -39,8 +39,8 @@ class DatabaseManager {
   // Conectar antes de executar a consulta
   async connect() {
     try {
-      /**  Exemplo na documentação do "https://sqlitecloud.io/":
-        * new Database('sqlitecloud://<your-project-id>.sqlite.cloud:<your-host-port>?apikey=<your-api-key>') criado no 
+      /** Exemplo na documentação do "https://docs.sqlitecloud.io/docs/connect-cluster"
+        * new Database('sqlitecloud://<your-project-id>.sqlite.cloud:<your-host-port>?apikey=<your-api-key>')
       */
       this.db = new Database(config.dbPath);
 
