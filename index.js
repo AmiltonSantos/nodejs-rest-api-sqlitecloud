@@ -11,7 +11,7 @@ const { Database } = require('@sqlitecloud/drivers');
 // Configurações
 const config = {
   port: process.env.PORT || 4000,
-  dbPath: process.env.DB_PATH || 'database/database.db',
+  dbPath: process.env.DB_PATH,
   timeout: process.env.query_TIMEOUT || 3 * 60 * 1000, // 3 minutos
   nodeEnv: process.env.NODE_ENV || 'development'
 };
@@ -36,9 +36,12 @@ class DatabaseManager {
     this.dbPath = dbPath;
   }
 
+  // Conectar antes de executar a consulta
   async connect() {
     try {
-      // Conectar antes de executar a consulta
+      /**  Exemplo na documentação do "https://sqlitecloud.io/":
+        * new Database('sqlitecloud://<your-project-id>.sqlite.cloud:<your-host-port>?apikey=<your-api-key>') criado no 
+      */
       this.db = new Database(config.dbPath);
 
       // Esse é o nome do banco de dados do projeto que foi criado no "https://sqlitecloud.io/"
