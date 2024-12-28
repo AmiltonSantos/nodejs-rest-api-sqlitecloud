@@ -344,6 +344,32 @@ app.post('/api/post/create/:table', checkDatabaseConnection, async (req, res, ne
   }
 });
 
+/**  Endpoint para criar uma nova tabela no banco de dados SQLite
+    * Exempplo 1: http://localhost:10000/api/post/add-table
+    * Modelo de Exemplo no body:
+    {
+        "tableName": "usuario",
+        "columns": "id INTEGER PRIMARY KEY, first TEXT NOT NULL, last TEXT NOT NULL, dept INTEGER"
+    }
+*/
+app.post('/api/post/add-table', checkDatabaseConnection, async (req, res, next) => {
+  const { tableName, columns } = req?.body;
+
+  if (!tableName || !columns) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Nome da tabela e colunas são obrigatórios.' });
+  }
+
+  const sql = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns});`;
+
+  try {
+    await dbManager.queryExec(sql);
+    res.status(HTTP_STATUS.OK).json({ message: `Tabela '${tableName}' criada com sucesso!` });
+  } catch (error) {
+    console.error(error.message);
+    next(new Error('Erro ao criar a tabela: ' + error.message));
+  }
+});
+
 // Rota padrão para endpoints não encontrados
 app.use('*', (req, res) => {
   res.status(HTTP_STATUS.NOT_FOUND).json({
