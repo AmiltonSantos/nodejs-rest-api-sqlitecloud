@@ -145,7 +145,7 @@ app.get('/home', (req, res) => {
 });
 
 /** Traz resultados de uma tabela especificada com limit de 10 linhas, passando o nome da tabela por parâmetro
-  * Exemplo 1: http://localhost:10000/api/get/users  
+  * Exemplo 1: http://localhost:10000/api/get/users
   * O "users" e o nome da tabela passada por paramentro
 */
 app.get('/api/get/:table', checkDatabaseConnection, async (req, res, next) => {
@@ -169,7 +169,7 @@ app.get('/api/get/:table', checkDatabaseConnection, async (req, res, next) => {
 });
 
 /** Pesquisando em uma tabela especifica passada por parâmetro e um ID
-    * Exemplo 1: http://localhost:10000/api/get/users/25  
+    * Exemplo 1: http://localhost:10000/api/get/users/25
     * O "users" e o "25" é a tabela e o numero da linha passada por paramentro
 */
 app.get('/api/get/:table/:id', checkDatabaseConnection, async (req, res, next) => {
@@ -197,7 +197,7 @@ app.get('/api/get/:table/:id', checkDatabaseConnection, async (req, res, next) =
 });
 
 /** Pesquisando passando uma tabela especifica, e com parâmetros de "page" e "limit"
-    * Exemplo 1: http://localhost:10000/api/get/pagination/users?page=1&limit=10 
+    * Exemplo 1: http://localhost:10000/api/get/pagination/users?page=1&limit=10
     * O "users", o "page=1" e o "limit=10" e os paramentro padrao para fazer a paginação
 */
 app.get('/api/get/pagination/:table', checkDatabaseConnection, async (req, res, next) => {
@@ -234,8 +234,8 @@ app.get('/api/get/pagination/:table', checkDatabaseConnection, async (req, res, 
   }
 });
 
-/** Atualiza um cadastro existente passando o ID. 
-    * Exemplo 1: http://localhost:10000/api/update/users/1  
+/** Atualiza um cadastro existente passando o ID.
+    * Exemplo 1: http://localhost:10000/api/update/users/1
     * O "users" e o "1" é a tabela e o numero da linha passada por paramentro
     * Modelo de Exemplo no body:
     {
@@ -274,7 +274,7 @@ app.patch('/api/update/:table/:id', checkDatabaseConnection, async (req, res, ne
 });
 
 /** Deletar um cadastro em uma tabala especifica passando um ID
-    * Exemplo 1: http://localhost:10000/api/delete/users/2 
+    * Exemplo 1: http://localhost:10000/api/delete/users/2
     * O "users" e o "2" é a tabela e o numero da linha passada por paramentro
 */
 app.delete('/api/delete/:table/:id', checkDatabaseConnection, async (req, res, next) => {
@@ -306,7 +306,7 @@ app.delete('/api/delete/:table/:id', checkDatabaseConnection, async (req, res, n
 });
 
 /** Cria um novo cadastro
-  * Exemplo 1: http://localhost:10000/api/post/create/users 
+  * Exemplo 1: http://localhost:10000/api/post/create/users
   * O "users" é o nome da tabela passada por paramentro
   * Modelo de Exemplo no body:
     {
@@ -359,7 +359,7 @@ app.post('/api/post/add-table', checkDatabaseConnection, async (req, res, next) 
     return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Nome da tabela e colunas são obrigatórios.' });
   }
 
-  const sql = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns});`;
+  const sql = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns})`;
 
   try {
     await dbManager.queryExec(sql);
@@ -367,6 +367,34 @@ app.post('/api/post/add-table', checkDatabaseConnection, async (req, res, next) 
   } catch (error) {
     console.error(error.message);
     next(new Error('Erro ao criar a tabela: ' + error.message));
+  }
+});
+
+/**  Criar uma nova coluna em uma tabela especifica no banco de dados SQLite
+    * Exempplo 1: http://localhost:10000/api/post/add-column/users
+    * O "users" é o nome da tabela passada por paramentro
+    * Modelo de Exemplo no body:
+    {
+        "columnName": "valor",
+        "columnType": "INTEGER"
+    }
+*/
+app.post('/api/post/add-column/:table', checkDatabaseConnection, async (req, res, next) => {
+  const { table } = req?.params;
+  const { columnName, columnType } = req?.body; // Obtem o nome da coluna e o tipo no corpo da solicitação
+
+  // Construa a instrução SQL
+  const sql = `ALTER TABLE ${table} ADD COLUMN ${columnName} ${columnType}`;
+
+  try {
+    await dbManager.queryExec(sql);
+    res.status(HTTP_STATUS.OK).json({ message: `Coluna '${columnName}' criada com sucesso!` });
+  } catch (error) {
+    if (error?.message?.includes('no such table')) {
+      next(new Error(error.message.replace('no such table:', 'Não existe a tabela:')));
+    } else {
+      next(new Error(error.message));
+    }
   }
 });
 
