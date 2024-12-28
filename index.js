@@ -42,7 +42,7 @@ class DatabaseManager {
       this.db = new Database(config.dbPath);
 
       // Esse é o nome do banco de dados do projeto que foi criado no "https://sqlitecloud.io/"
-      await this.db.sql`USE DATABASE database.db;`; 
+      await this.db.sql`USE DATABASE database.db;`;
     } catch (error) {
       console.error(error);
       return null;
@@ -64,6 +64,12 @@ class DatabaseManager {
         resolve(rows);
       });
     });
+  }
+
+  close() {
+    if (this.db) {
+      this.db.close();
+    }
   }
 }
 
@@ -96,6 +102,7 @@ const dbManager = new DatabaseManager(config.dbPath);
 
 // Middleware
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(morgan('dev')); // Logging
 app.use(helmet()); // Segurança
 app.use(compression()); // Compressão
@@ -121,7 +128,7 @@ app.get('/home', (req, res) => {
 });
 
 /** Traz resultados de uma tabela especificada com limit de 10 linhas, passando o nome da tabela por parâmetro
-  * Exemplo 1: http://localhost:8000/api/read/users  
+  * Exemplo 1: http://localhost:10000/api/read/users  
   * O "users" e o nome da tabela passada por paramentro
 */
 app.get('/api/read/:table', checkDatabaseConnection, async (req, res, next) => {
@@ -135,6 +142,35 @@ app.get('/api/read/:table', checkDatabaseConnection, async (req, res, next) => {
       status: 'success',
       data: resultado
     });
+  } catch (error) {
+    if (error?.message?.includes('no such table')) {
+      next(new Error(error.message.replace('no such table:', 'Não existe a tabela:')));
+    } else {
+      next(new Error(error.message));
+    }
+  }
+});
+
+/** Pesquisando em uma tabela especifica passada por parâmetro e um ID
+    * Exemplo 1: http://localhost:10000/api/read/users/25  
+    * O "users" e o "25" é a tabela e o numero da linha passada por paramentro
+*/
+app.get('/api/read/:table/:id', checkDatabaseConnection, async (req, res, next) => {
+  const { table, id } = req?.params;
+
+  if (!table && !id) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ 'message': 'Bad request. Missing ID parameter' });
+  }
+
+  const sql = `SELECT * FROM ${table} WHERE id = ?`;
+  const params = [id];
+
+  try {
+    const row = await dbManager.query(sql, params);
+    if (row.length === 0) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ "message": "User not found" });
+    }
+    res.status(HTTP_STATUS.OK).json(row[0]); // Retorna o primeiro usuário encontrado
   } catch (error) {
     if (error?.message?.includes('no such table')) {
       next(new Error(error.message.replace('no such table:', 'Não existe a tabela:')));
