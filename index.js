@@ -305,6 +305,45 @@ app.delete('/api/delete/:table/:id', checkDatabaseConnection, async (req, res, n
   }
 });
 
+/** Cria um novo cadastro
+  * Exemplo 1: http://localhost:10000/api/post/create/users 
+  * O "users" é o nome da tabela passada por paramentro
+  * Modelo de Exemplo no body:
+    {
+      "name": "Leonardo Gomes",
+      "email": "leonardo@a1000ton.com"
+    }
+*/
+app.post('/api/post/create/:table', checkDatabaseConnection, async (req, res, next) => {
+  const { table } = req?.params; // Obtém o nome da tabela da URL
+
+  let [keys, values] = [[], []];
+
+  if (Object.keys(req?.body).length > 0) {
+    for (const [key, value] of Object.entries(req?.body)) {
+      keys.push(key);
+      if (value === null) {
+        values.push(`${value}`);
+      } else {
+        values.push(`'${value}'`);
+      }
+    }
+  }
+
+  const sql = `INSERT INTO ${table} (${keys.join()}) VALUES (${values.join()})`;
+
+  try {
+    await dbManager.queryExec(sql);
+    res.status(HTTP_STATUS.OK).json({ message: `Cadastro criado com sucesso!`, id: this.lastID });
+  } catch (error) {
+    if (error?.message?.includes('UNIQUE constraint failed')) {
+      next(new Error('O email já existe'));
+    } else {
+      next(new Error(error.message));
+    }
+  }
+});
+
 // Rota padrão para endpoints não encontrados
 app.use('*', (req, res) => {
   res.status(HTTP_STATUS.NOT_FOUND).json({

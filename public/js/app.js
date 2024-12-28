@@ -1,6 +1,6 @@
 async function fetchUsers() {
   try {
-    const response = await fetch('/home');
+    const response = await fetch('/api/get/users');
     if (!response.ok) {
       throw new Error('Network response was not ok');
     }
