@@ -199,6 +199,43 @@ app.get('/api/get/:table/:id', checkDatabaseConnection, async (req, res, next) =
   }
 });
 
+/** Pesquisando passando uma tabela especifica, e com parâmetros alguma coisa salva nas colunas
+    * Exemplo 1: http://localhost:10000/api/search/users?name=amilton&email=amilton
+    * O "users", é a tabela e os parametros são colunas das tabelas com os dados que está sendo procurado
+*/
+app.get('/api/search/:table', checkDatabaseConnection, async (req, res, next) => {
+  const { table } = req?.params;
+  let searchLike = [];
+  
+  if (Object.keys(req?.query).length === 0) {
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ 'message': 'Bad request. Missing page or limit parameter' });
+  } else {
+    for (const [key, value] of Object.entries(req?.query)) {
+      searchLike.push(`${key} LIKE '%${value}%'`);
+    }
+  }
+
+  const sql = `SELECT * FROM ${table} WHERE ${searchLike.join().replaceAll(',', ' OR ')}`;
+
+  try {
+    const rows = await dbManager.queryAll(sql);
+    if (rows.length > 0) {
+      res.setHeader('Content-Type', 'application/json');
+      res.status(HTTP_STATUS.OK).json(rows);
+    } else {
+      res.status(HTTP_STATUS.OK).json({
+        "message": `Não foi encontrado nenhum resultado para essa consulta.`
+      });
+    }
+  } catch (error) {
+    if (error?.message?.includes('no such table')) {
+      next(new Error(error.message.replace('no such table:', 'Não existe a tabela:')));
+    } else {
+      next(new Error(error.message));
+    }
+  }
+});
+
 /** Pesquisando passando uma tabela especifica, e com parâmetros de "page" e "limit"
     * Exemplo 1: http://localhost:10000/api/pagination/users?page=1&limit=10
     * O "users", o "page=1" e o "limit=10" e os paramentro padrao para fazer a paginação
