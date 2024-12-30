@@ -200,10 +200,10 @@ app.get('/api/get/:table/:id', checkDatabaseConnection, async (req, res, next) =
 });
 
 /** Pesquisando passando uma tabela especifica, e com parâmetros de "page" e "limit"
-    * Exemplo 1: http://localhost:10000/api/get/pagination/users?page=1&limit=10
+    * Exemplo 1: http://localhost:10000/api/pagination/users?page=1&limit=10
     * O "users", o "page=1" e o "limit=10" e os paramentro padrao para fazer a paginação
 */
-app.get('/api/get/pagination/:table', checkDatabaseConnection, async (req, res, next) => {
+app.get('/api/pagination/:table', checkDatabaseConnection, async (req, res, next) => {
   const { table } = req?.params;
   const { page, limit } = req?.query;
 
