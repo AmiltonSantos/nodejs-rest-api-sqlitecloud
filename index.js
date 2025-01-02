@@ -7,6 +7,8 @@ const compression = require('compression'); // Para compressão de respostas
 const path = require('path');
 const cors = require('cors');
 const { Database } = require('@sqlitecloud/drivers');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json'); // Arquivo de definição Swagger
 
 // Configurações
 const config = {
@@ -142,16 +144,19 @@ const checkDatabaseConnection = async (req, res, next) => {
   }
 };
 
+// Rota para documentação do swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // Rota da pagina home onde vai abri a pagina inicial do app
 app.get('/home', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 /** Traz resultados de uma tabela especificada com limit de 10 linhas, passando o nome da tabela por parâmetro
-  * Exemplo 1: http://localhost:10000/api/get/users
+  * Exemplo 1: http://localhost:10000/open/get/users
   * O "users" e o nome da tabela passada por paramentro
 */
-app.get('/api/get/:table', checkDatabaseConnection, async (req, res, next) => {
+app.get('/open/get/:table', checkDatabaseConnection, async (req, res, next) => {
   const { table } = req?.params; // Obtém o nome da tabela da URL
 
   const sql = `SELECT * FROM ${table} LIMIT 10`;
@@ -172,10 +177,10 @@ app.get('/api/get/:table', checkDatabaseConnection, async (req, res, next) => {
 });
 
 /** Pesquisando em uma tabela especifica passada por parâmetro e um ID
-    * Exemplo 1: http://localhost:10000/api/get/users/25
+    * Exemplo 1: http://localhost:10000/open/get/users/25
     * O "users" e o "25" é a tabela e o numero da linha passada por paramentro
 */
-app.get('/api/get/:table/:id', checkDatabaseConnection, async (req, res, next) => {
+app.get('/open/get/:table/:id', checkDatabaseConnection, async (req, res, next) => {
   const { table, id } = req?.params;
 
   if (!table && !id) {
@@ -200,10 +205,10 @@ app.get('/api/get/:table/:id', checkDatabaseConnection, async (req, res, next) =
 });
 
 /** Pesquisando passando uma tabela especifica, e com parâmetros alguma coisa salva nas colunas
-    * Exemplo 1: http://localhost:10000/api/search/users?name=amilton&email=amilton
+    * Exemplo 1: http://localhost:10000/open/search/users?name=amilton&email=amilton
     * O "users", é a tabela e os parametros são colunas das tabelas com os dados que está sendo procurado
 */
-app.get('/api/search/:table', checkDatabaseConnection, async (req, res, next) => {
+app.get('/open/search/:table', checkDatabaseConnection, async (req, res, next) => {
   const { table } = req?.params;
   let searchLike = [];
   
@@ -237,10 +242,10 @@ app.get('/api/search/:table', checkDatabaseConnection, async (req, res, next) =>
 });
 
 /** Pesquisando passando uma tabela especifica, e com parâmetros de "page" e "limit"
-    * Exemplo 1: http://localhost:10000/api/pagination/users?page=1&limit=10
+    * Exemplo 1: http://localhost:10000/open/pagination/users?page=1&limit=10
     * O "users", o "page=1" e o "limit=10" e os paramentro padrao para fazer a paginação
 */
-app.get('/api/pagination/:table', checkDatabaseConnection, async (req, res, next) => {
+app.get('/open/pagination/:table', checkDatabaseConnection, async (req, res, next) => {
   const { table } = req?.params;
   const { page, limit } = req?.query;
 
@@ -275,7 +280,7 @@ app.get('/api/pagination/:table', checkDatabaseConnection, async (req, res, next
 });
 
 /** Atualiza um cadastro existente passando o ID.
-    * Exemplo 1: http://localhost:10000/api/update/users/1
+    * Exemplo 1: http://localhost:10000/open/update/users/1
     * O "users" e o "1" é a tabela e o numero da linha passada por paramentro
     * Modelo de Exemplo no body:
     {
@@ -284,7 +289,7 @@ app.get('/api/pagination/:table', checkDatabaseConnection, async (req, res, next
         "dept": 2
     }
 */
-app.patch('/api/update/:table/:id', checkDatabaseConnection, async (req, res, next) => {
+app.patch('/open/update/:table/:id', checkDatabaseConnection, async (req, res, next) => {
   const { table, id } = req?.params; // Obtém o nome da tabela da URL
 
   let keys = [];
@@ -314,10 +319,10 @@ app.patch('/api/update/:table/:id', checkDatabaseConnection, async (req, res, ne
 });
 
 /** Deletar um cadastro em uma tabala especifica passando um ID
-    * Exemplo 1: http://localhost:10000/api/delete/users/2
+    * Exemplo 1: http://localhost:10000/open/delete/users/2
     * O "users" e o "2" é a tabela e o numero da linha passada por paramentro
 */
-app.delete('/api/delete/:table/:id', checkDatabaseConnection, async (req, res, next) => {
+app.delete('/open/delete/:table/:id', checkDatabaseConnection, async (req, res, next) => {
   const { table, id } = req?.params;
 
   // Primeiro, verifique se o registro existe
@@ -346,7 +351,7 @@ app.delete('/api/delete/:table/:id', checkDatabaseConnection, async (req, res, n
 });
 
 /** Cria um novo cadastro
-  * Exemplo 1: http://localhost:10000/api/post/create/users
+  * Exemplo 1: http://localhost:10000/open/post/create/users
   * O "users" é o nome da tabela passada por paramentro
   * Modelo de Exemplo no body:
     {
@@ -354,7 +359,7 @@ app.delete('/api/delete/:table/:id', checkDatabaseConnection, async (req, res, n
       "email": "leonardo@a1000ton.com"
     }
 */
-app.post('/api/post/create/:table', checkDatabaseConnection, async (req, res, next) => {
+app.post('/open/post/create/:table', checkDatabaseConnection, async (req, res, next) => {
   const { table } = req?.params; // Obtém o nome da tabela da URL
 
   let [keys, values] = [[], []];
@@ -385,14 +390,14 @@ app.post('/api/post/create/:table', checkDatabaseConnection, async (req, res, ne
 });
 
 /**  Endpoint para criar uma nova tabela no banco de dados SQLite
-    * Exempplo 1: http://localhost:10000/api/post/add-table
+    * Exempplo 1: http://localhost:10000/open/post/add-table
     * Modelo de Exemplo no body:
     {
         "tableName": "usuario",
         "columns": "id INTEGER PRIMARY KEY, first TEXT NOT NULL, last TEXT NOT NULL, dept INTEGER"
     }
 */
-app.post('/api/post/add-table', checkDatabaseConnection, async (req, res, next) => {
+app.post('/open/post/add-table', checkDatabaseConnection, async (req, res, next) => {
   const { tableName, columns } = req?.body;
 
   if (!tableName || !columns) {
@@ -411,7 +416,7 @@ app.post('/api/post/add-table', checkDatabaseConnection, async (req, res, next) 
 });
 
 /**  Criar uma nova coluna em uma tabela especifica no banco de dados SQLite
-    * Exempplo 1: http://localhost:10000/api/post/add-column/users
+    * Exempplo 1: http://localhost:10000/open/post/add-column/users
     * O "users" é o nome da tabela passada por paramentro
     * Modelo de Exemplo no body:
     {
@@ -419,7 +424,7 @@ app.post('/api/post/add-table', checkDatabaseConnection, async (req, res, next) 
         "columnType": "INTEGER"
     }
 */
-app.post('/api/post/add-column/:table', checkDatabaseConnection, async (req, res, next) => {
+app.post('/open/post/add-column/:table', checkDatabaseConnection, async (req, res, next) => {
   const { table } = req?.params;
   const { columnName, columnType } = req?.body; // Obtem o nome da coluna e o tipo no corpo da solicitação
 

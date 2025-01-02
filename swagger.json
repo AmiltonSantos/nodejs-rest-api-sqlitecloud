@@ -1,0 +1,85 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "description": "Informações sobre acesso a Api!",
+    "title": "API NODE SQLITECLOUD.IO",
+    "contact": {
+      "name": "Amilton Santos",
+      "email": "a1000tontec@gmail.com",
+      "url": "https://www.a1000ton.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Rota inicial para exibir dados Swagger"
+    },
+    {
+      "url": "/home",
+      "description": "Pagina de exibicão de dados"
+    },
+    {
+      "url": "/api-docs",
+      "description": "Informações Swagger sobre a API!"
+    },
+    {
+      "url": "/open/",
+      "description": "Requisições abertas - Sem Token!"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/open/get/{table}": {
+      "get": {
+        "tags": [
+          "table"
+        ],
+        "summary": "Get Information with given Table",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "description": "Information with table",
+            "schema": {
+              "$ref": "#/definitions/table"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/table"
+            }
+          },
+          "404": {
+            "description": "Failed. Information not found."
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "id": {
+      "properties": {
+        "uuid": {
+          "type": "string"
+        }
+      }
+    },
+    "table": {
+      "properties": {
+        "uuid": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
